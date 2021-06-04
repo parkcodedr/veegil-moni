@@ -11,7 +11,8 @@ const TransactionScheme = new mongoose.Schema({
     sender: {
         type: String,
     },
-    accountNumber: {
+    debitAccount: String,
+    creditAccount: {
         type: String,
     },
     date: {

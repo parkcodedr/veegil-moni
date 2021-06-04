@@ -135,7 +135,67 @@ router.post('/send', ensureAuthenticated, (req, res) => {
         transactionType: "Transfer",
         amount,
         sender: req.user.name,
-        accountNumber: req.user.phone
+        debitAccount: req.user.phone,
+        creditAccount: accountNumber
+    })
+    const UserAccount = Account.findOne({ userId: req.user._id }).then(senderAccount => {
+        if (senderAccount.balance < amount) {
+            errors.push({ msg: 'Insufficient Fund' });
+            res.render('send', {
+                errors,
+                amount,
+                accountNumber
+            });
+
+        }
+    })
+    Account.findOne({ accountNumber }).then(account => {
+        if (!account) {
+            errors.push({ msg: 'Invalid Account Number' });
+            res.render('send', {
+                errors,
+                amount,
+                accountNumber
+            });
+        }
+        if (account.balance < amount) {
+
+        }
+        account.balance += Number(amount);
+        account.save().then(data => {
+
+            transaction.save().then(trans => {
+                console.log(trans);
+                req.flash('success_msg', 'Sent Successfully');
+                res.redirect('/send');
+            }).catch(error => {
+                console.log(error);
+            })
+
+        })
+    }).catch(error => {
+        console.log(error);
+        req.flash('error_msg', 'Unable to sent, try again');
+        res.redirect('/send');
+    });
+})
+
+router.post('/deposit', ensureAuthenticated, (req, res) => {
+    let errors = []
+    const { amount } = req.body;
+    if (!amount || amount == 0) {
+        errors.push({ msg: 'Please enter valid deposit Amount' });
+        res.render('deposit', {
+            errors,
+            amount,
+
+        });
+    }
+    const transaction = new Transactions({
+        transactionType: "deposit",
+        amount,
+        sender: "self",
+        creditAccount: req.user.phone
     })
     console.log(transaction);
     Account.findOne({ userId: req.user._id }).then(account => {
@@ -152,4 +212,16 @@ router.post('/send', ensureAuthenticated, (req, res) => {
         })
     }).catch(error => {
         console.log(error);
-        req.flash('error_msg', 'Unable
+        req.flash('error_msg', 'Unable to deposit, try again');
+        res.redirect('/deposit');
+    });
+})
+router.get('/logout', (req, res) => {
+    req.logout();
+    req.flash('success_msg', 'You are logged out');
+    res.redirect('/login');
+});
+
+
+
+module.exports = router;
