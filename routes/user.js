@@ -138,7 +138,7 @@ router.post('/send', ensureAuthenticated, (req, res) => {
         debitAccount: req.user.phone,
         creditAccount: accountNumber
     })
-    const UserAccount = Account.findOne({ userId: req.user._id }).then(senderAccount => {
+    Account.findOne({ userId: req.user._id }).then(senderAccount => {
         if (senderAccount.balance < amount) {
             errors.push({ msg: 'Insufficient Fund' });
             res.render('send', {
