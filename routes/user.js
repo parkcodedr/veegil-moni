@@ -112,73 +112,86 @@ router.get('/deposit', ensureAuthenticated, (req, res) => {
 router.get('/send', ensureAuthenticated, (req, res) => {
     res.render('send', { name: req.user.name });
 })
+
 router.post('/send', ensureAuthenticated, (req, res) => {
-    let errors = []
+    let errors = [];
+    let senderAccount;
     const { amount, accountNumber } = req.body;
-    if (!amount || amount == 0) {
+    if (!amount || amount <= 0) {
         errors.push({ msg: 'Please enter valid deposit Amount' });
-        res.render('send', {
+        return res.render('send', {
             errors,
             amount,
             accountNumber
         });
-    }
-    if (!accountNumber) {
+    } else if (!accountNumber) {
         errors.push({ msg: 'Please enter Account Number' });
-        res.render('send', {
+        return res.render('send', {
             errors,
             amount,
             accountNumber
         });
     }
-    const transaction = new Transactions({
-        transactionType: "Transfer",
-        amount,
-        sender: req.user.name,
-        debitAccount: req.user.phone,
-        creditAccount: accountNumber
-    })
-    Account.findOne({ userId: req.user._id }).then(senderAccount => {
-        if (senderAccount.balance < amount) {
-            errors.push({ msg: 'Insufficient Fund' });
-            res.render('send', {
-                errors,
-                amount,
-                accountNumber
-            });
-
-        }
-    })
-    Account.findOne({ accountNumber }).then(account => {
-        if (!account) {
+    getAccount(accountNumber).then(acc => {
+        if (!acc) {
+            console.log(acc);
             errors.push({ msg: 'Invalid Account Number' });
-            res.render('send', {
+            return res.render('send', {
                 errors,
                 amount,
                 accountNumber
             });
+        } else {
+            console.log(acc);
         }
-        if (account.balance < amount) {
-
-        }
-        account.balance += Number(amount);
-        account.save().then(data => {
-
-            transaction.save().then(trans => {
-                console.log(trans);
-                req.flash('success_msg', 'Sent Successfully');
-                res.redirect('/send');
-            }).catch(error => {
-                console.log(error);
-            })
-
-        })
     }).catch(error => {
         console.log(error);
-        req.flash('error_msg', 'Unable to sent, try again');
-        res.redirect('/send');
-    });
+    })
+
+
+
+    //find and check sender account balance
+    Account.findOne({ userId: req.user._id }).then(account => {
+        if (!account) {
+            errors.push({ msg: 'No Account Found' });
+            return res.render('send', {
+                errors,
+                amount,
+                accountNumber
+            });
+        }
+        console.log(account.balance);
+        if (account.balance < Number(amount)) {
+            errors.push({ msg: 'Insufficient Fund' });
+            return res.render('send', {
+                errors,
+                amount,
+                accountNumber
+            });
+        }
+        senderAccount = account;
+        console.log(senderAccount);
+    })
+
+
+
+    if (creditAccount(accountNumber, amount)) {
+        console.log("user account", getUserAccount(req.user));
+        if (debitAccount(senderAccount.accountNumber, amount)) {
+            //sender, transactionType, debitAccount, creditAccount, amount
+
+            if (updateTransaction(req.user.name, "Transfer",
+                senderAccount.accountNumber,
+                accountNumber,
+                amount)) {
+                req.flash('success_msg', 'Sent Successfully');
+                res.redirect('/send');
+            }
+        }
+    }
+
 })
+
 
 router.post('/deposit', ensureAuthenticated, (req, res) => {
     let errors = []
@@ -221,6 +234,42 @@ router.get('/logout', (req, res) => {
     req.flash('success_msg', 'You are logged out');
     res.redirect('/login');
 });
+
+const debitAccount = async (accountNumber, amount) => {
+    const account = await Account.findOne({ accountNumber });
+    account.balance -= Number(amount);
+    const result = await account.save();
+    return result;
+}
+const getUserAccount = async (user) => {
+    const account = await Account.findOne({ userId: user._id });
+    return account.accountNumber;
+
+}
+
+const creditAccount = async (accountNumber, amount) => {
+    const account = await Account.findOne({ accountNumber });
+    account.balance += Number(amount);
+    const result = await account.save();
+    return result;
+}
+const getAccount = (accountNumber) => {
+    const account = Account.findOne({ accountNumber });
+    return account;
+}
+
+const updateTransaction = async (sender, transactionType, debitAccount, creditAccount, amount) => {
+    const transaction = new Transactions({
+        sender,
+        transactionType,
+        debitAccount,
+        creditAccount,
+        amount: Number(amount),
+    });
+    const trans = await transaction.save();
+    return trans;
+
+}
 
 
 
