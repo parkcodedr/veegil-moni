@@ -12,6 +12,13 @@ router.get('/login', (req, res) => {
     res.render('login');
 })
 
+router.get('/transactions', ensureAuthenticated, async (req, res) => {
+    const transactions = await Transactions.find({ creditAccount: req.user.phone, debitAccount: req.user.phone })
+    console.log(transactions);
+    res.render('transactions', { transactions });
+})
+
+
 router.get('/signup', (req, res) => {
     res.render('signup');
 })
@@ -115,7 +122,6 @@ router.get('/send', ensureAuthenticated, (req, res) => {
 
 router.post('/send', ensureAuthenticated, (req, res) => {
     let errors = [];
-    let senderAccount;
     const { amount, accountNumber } = req.body;
     if (!amount || amount <= 0) {
         errors.push({ msg: 'Please enter valid deposit Amount' });
@@ -141,8 +147,6 @@ router.post('/send', ensureAuthenticated, (req, res) => {
                 amount,
                 accountNumber
             });
-        } else {
-            console.log(acc);
         }
     }).catch(error => {
         console.log(error);
@@ -160,7 +164,7 @@ router.post('/send', ensureAuthenticated, (req, res) => {
                 accountNumber
             });
         }
-        console.log(account.balance);
+
         if (account.balance < Number(amount)) {
             errors.push({ msg: 'Insufficient Fund' });
             return res.render('send', {
@@ -169,27 +173,23 @@ router.post('/send', ensureAuthenticated, (req, res) => {
                 accountNumber
             });
         }
-        senderAccount = account;
-        console.log(senderAccount);
     })
 
-
-
-    if (creditAccount(accountNumber, amount)) {
-        console.log("user account", getUserAccount(req.user));
+    Account.findOne({ userId: req.user._id }).then(senderAccount => {
         if (debitAccount(senderAccount.accountNumber, amount)) {
-            //sender, transactionType, debitAccount, creditAccount, amount
-
-            if (updateTransaction(req.user.name, "Transfer",
-                senderAccount.accountNumber,
-                accountNumber,
-                amount)) {
-                req.flash('success_msg', 'Sent Successfully');
-                res.redirect('/send');
+            if (creditAccount(accountNumber, amount)) {
+                //sender, transactionType, debitAccount, creditAccount, amount
+                if (updateTransaction(req.user.name, "Transfer",
+                    senderAccount.accountNumber,
+                    accountNumber,
+                    amount)) {
+                    req.flash('success_msg', 'Sent Successfully');
+                    res.redirect('/send');
+                }
             }
         }
-    }
 
+    })
 })
 
 
@@ -237,6 +237,7 @@ router.get('/logout', (req, res) => {
 
 const debitAccount = async (accountNumber, amount) => {
     const account = await Account.findOne({ accountNumber });
+    console.log("debit account", account);
     account.balance -= Number(amount);
     const result = await account.save();
     return result;
