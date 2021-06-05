@@ -106,8 +106,15 @@
       <td colspan="3">No transaction found</td>
     </tr>
                            
-<% } %>
-   
+<% }else{%>
+<tr>
+      <th scope="row"><%=transctions._id %></th>
+      <td><%=transctions.transactionType %></td>
+      <td><%=transctions.sender %></td>
+      <td><%=transctions.amount %></td>
+      <td><%=transctions.date %></td>
+    </tr>
+   <% } %>
    
     
   </tbody>
