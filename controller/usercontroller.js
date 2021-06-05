@@ -1,6 +1,7 @@
 const passport = require('passport');
 const Account = require('../model/Account');
 const Transactions = require('../model/Transactions');
+const moment = require('moment');
 
 module.exports.getLogin = (req, res) => {
     res.render('login');
@@ -18,8 +19,12 @@ module.exports.dashboard = async (req, res) => {
 }
 
 module.exports.getTransactions = async (req, res) => {
-    const transactions = await Transactions.find({ creditAccount: req.user.phone, debitAccount: req.user.phone })
+    let transactions = await Transactions.find({ $or: [{ creditAccount: req.user.phone }, { debitAccount: req.user.phone }] })
     console.log(transactions);
+    transactions.forEach(transaction => {
+        transaction.date = moment(transaction.date).format('YYYY-MM-DD HH:mm:ss');
+    });
+    
     res.render('transactions', { transactions });
 }
 

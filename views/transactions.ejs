@@ -83,9 +83,9 @@
 
     <!-- ======= About Us Section ======= -->
     <section id="about-us" class="about-us">
-      <div class="container" data-aos="fade-up">
+      <div class="container-fluid" data-aos="fade-up">
 
-        <div class="container">
+        <div class="container-fluid">
           <div class="row">
             <div class="col-md-12">
               <h2 id="title" class="text-center">Transactions </h2>
@@ -107,14 +107,20 @@
     </tr>
                            
 <% }else{%>
-<tr>
-      <th scope="row"><%=transctions._id %></th>
-      <td><%=transctions.transactionType %></td>
-      <td><%=transctions.sender %></td>
-      <td><%=transctions.amount %></td>
-      <td><%=transctions.date %></td>
+
+<%
+transactions.forEach(function(transaction){
+     %>
+    <tr>
+      <th scope="row"><%=transaction._id %></th>
+      <td><%=transaction.transactionType %></td>
+      <td><%=transaction.sender %></td>
+      <td><%=transaction.amount %></td>
+      <td><%=transaction.date %></td>
     </tr>
-   <% } %>
+      <% }); %>
+
+<% }%>
    
     
   </tbody>
